@@ -1,100 +1,90 @@
 import json
 import requests
 import msvcrt as m
+import datetime
+
+
+def validate_date(date_text):
+    is_correct = True
+    try:
+        datetime.datetime.strptime(date_text, '%Y-%m-%d')
+    except ValueError:
+        is_correct = False
+    return is_correct
 
 
 def wait():
     m.getch()
 
 
-print(
-    "\n" + "Get current and historical foreign exchange rates" + "\n" + "published by the European Central Bank" + "\n")
-
+print("Current and historical foreign exchange rates published by the European Central Bank" + "\n")
 print("The rates are updated daily around 4PM CET.")
 print("Powered by Fixer.io" + "\n")
 
-print("Supported Currencies:" + "\n"
-                                "   EUR Euro" + "\n"
-                                "   USD US Dollar" + "\n"
-                                "   JPY Japanese Yen" + "\n"
-                                "   BGN Bulgarian Lev" + "\n"
-                                "   CZK Czech Koruna" + "\n"
-                                "   DKK Danish Krone" + "\n"
-                                "   GBP Pound Sterling" + "\n"
-                                "   HUF Hungarian Forint" + "\n"
-                                "   PLN Polish Zloty" + "\n"
-                                "   RON Romanian Leu" + "\n"
-                                "   SEK Swedish Krona" + "\n"
-                                "   CHF Swiss Franc" + "\n"
-                                "   NOK Norwegian Krone" + "\n"
-                                "   HRK Croatian Kuna" + "\n"
-                                "   RUB Russian Rouble" + "\n"
-                                "   TRY Turkish Lira" + "\n"
-                                "   AUD Australian Dollar" + "\n"
-                                "   BRL Brazilian Real" + "\n"
-                                "   CAD Canadian Dollar" + "\n"
-                                "   CNY Chinese Yuan Renminbi" + "\n"
-                                "   HKD Hong Kong Dollar" + "\n"
-                                "   IDR Indonesian Rupiah" + "\n"
-                                "   ILS Israeli Shekel" + "\n"
-                                "   INR Indian Rupee" + "\n"
-                                "   KRW South Korean Won" + "\n"
-                                "   MXN Mexican Peso" + "\n"
-                                "   MYR Malaysian Ringgit" + "\n"
-                                "   NZD New Zealand Dollar" + "\n"
-                                "   PHP Philippine Peso" + "\n"
-                                "   SGD Singapore Dollar" + "\n"
-                                "   THB Thai Baht" + "\n"
-                                "   ZAR South African Rand" + "\n"
-                                "   ISK Icelandic Krona - The last rate was published on 3 Dec 2008" + "\n")
+supported_currencies = {'USD': 'US dollar', 'JPY': 'Japanese yen', 'BGN': 'Bulgarian lev', 'CZK': 'Czech koruna',
+                        'DKK': 'Danish krone', 'GBP': 'Pound sterling', 'HUF': 'Hungarian forint',
+                        'PLN': 'Polish zloty', 'RON': 'Romanian leu', 'SEK': 'Swedish krona', 'CHF': 'Swiss franc',
+                        'ISK': 'Icelandic krona', 'NOK': 'Norwegian krone', 'HRK': 'Croatian kuna',
+                        'RUB': 'Russian rouble', 'TRY': 'Turkish lira', 'AUD': 'Australian dollar',
+                        'BRL': 'Brazilian real', 'CAD': 'Canadian dollar', 'CNY': 'Chinese yuan renminbi',
+                        'HKD': 'Hong Kong dollar', 'IDR': 'Indonesian rupiah', 'ILS': 'Israeli shekel',
+                        'INR': 'Indian rupee', 'KRW': 'South Korean won', 'MXN': 'Mexican peso',
+                        'MYR': 'Malaysian ringgit', 'NZD': 'New Zealand dollar', 'PHP': 'Philippine piso',
+                        'SGD': 'Singapore dollar', 'THB': 'Thai baht', 'ZAR': 'South African rand'}
+
+print("Supported Currencies:")
+for key, value in supported_currencies.items():
+    print(''.join([key, ': ', value]))
 
 while True:
 
-    supported = ["AUD", "CAD", "CHF", "CYP", "CZK", "DKK", "EEK", "GBP", "HKD", "HUF", "ISK", "JPY", "KRW", "LTL",
-                 "LVL", "MTL", "NOK", "NZD", "PLN", "ROL", "SEK", "SGD", "SIT", "SKK", "TRL", "ZAR", "EUR", "USD"]
+    base_ISO = input('\n' + 'Enter base currency (ISO code): ')
+    convert_to_ISO = input('Convert to (ISO code): ')
 
-    base = input('Enter base currency (ISO code): ')
-    convTo = input('\n' + 'Convert to (ISO code): ')
+    if base_ISO.upper() not in supported_currencies or convert_to_ISO.upper() not in supported_currencies:
+        print("****ERROR: One of provided ISO codes is not valid!****")
+        base_ISO = input('\n' + 'Enter base currency (ISO code): ')
+        convert_to_ISO = input('Convert to (ISO code): ')
 
-    if base.upper() not in supported or convTo.upper() not in supported:
-        print("\n" + "****ERROR: One of the ISO codes is not valid!****" + "\n")
+    amount = input("Amount to convert (leave blank if you want just the exchange rate): ")
+    hist_choice = input("Check the historical exchange rate (any day since 1999)? (Y/N): ")
+
+    if hist_choice.upper() == "Y":
+        hist_date = input("Enter date in YYYY-MM-DD format: ")
+        if validate_date(hist_date):
+            url = ''.join(['http://api.fixer.io/', hist_date, '?base=', base_ISO])
+        else:
+            print("Incorrect date format!")
+    elif hist_choice.upper() == 'N':
+        url = ''.join(['http://api.fixer.io/latest?base=', base_ISO])
+
+    response = requests.get(url)
+    response.raise_for_status()
+    exRates = json.loads(response.text)
+    e = exRates['rates']
+
+    if hist_choice.upper() == "Y":
+        if amount == "":
+            print(''.join(
+                ['Exchange rate for ', hist_date, ': 1 ', base_ISO.upper(), ' = ', str(e[convert_to_ISO.upper()]), ' ',
+                 convert_to_ISO.upper()]))
+        else:
+            print(''.join(
+                ['Using exchange rate for ', hist_date, ': ', amount, ' ', base_ISO.upper(), ' = ',
+                 str(round(float(amount) * float(e[convert_to_ISO.upper()]), 2)), ' ', convert_to_ISO.upper()]))
     else:
-
-        amount = input("\n" + "Amount to convert (leave blank if you want just the exchange rate): ")
-
-        hist = input("\n" + "Check the historical exchange rate (any day since 1999)? (Y/N): ")
-
-        if hist.upper() == "Y":
-            histDate = input("Enter date in YYYY-MM-DD format: ")
-
-            url = 'http://api.fixer.io/' + histDate + '?base=' + base
+        if amount == "":
+            print(''.join(
+                ['Exchange rate for ', exRates['date'], ': 1 ', base_ISO.upper(), ' = ', str(e[convert_to_ISO.upper()]),
+                 ' ', convert_to_ISO.upper()]))
         else:
-            url = 'http://api.fixer.io/latest?base=' + base
+            print(''.join(
+                ['Exchange rate for ', exRates['date'], ': 1 ', base_ISO.upper(), ' = ', str(e[convert_to_ISO.upper()]),
+                 '', convert_to_ISO.upper()]))
+            print(''.join(
+                ['Using this exchange rate for: ', amount, ' ', base_ISO.upper(), ' = ',
+                 str(round(float(amount) * float(e[convert_to_ISO.upper()]), 2)), ' ', convert_to_ISO.upper()]))
 
-        response = requests.get(url)
-        response.raise_for_status()
-
-        exRates = json.loads(response.text)
-
-        e = exRates['rates']
-
-        if hist.upper() == "Y":
-            if amount == "":
-                print('\n' + 'Exchange rate for ' + histDate + ': 1 ' + base.upper() + ' = ' + str(
-                    e[convTo.upper()]) + ' ' + convTo.upper())
-            else:
-                print('\n' + 'Using exchange rate for ' + histDate + ': ' + amount + ' ' + base.upper() + ' = ' + str(
-                    round(float(amount) * float(e[convTo.upper()]), 2)) + ' ' + convTo.upper())
-        else:
-            if amount == "":
-                print('\n' + 'Exchange rate for ' + exRates['date'] + ': 1 ' + base.upper() + ' = ' + str(
-                    e[convTo.upper()]) + ' ' + convTo.upper())
-            else:
-                print('\n' + 'Exchange rate for ' + exRates['date'] + ': 1 ' + base.upper() + ' = ' + str(
-                    e[convTo.upper()]) + ' ' + convTo.upper())
-                print('\n' + 'Using this exchange rate for: ' + amount + ' ' + base.upper() + ' = ' + str(
-                    round(float(amount) * float(e[convTo.upper()]), 2)) + ' ' + convTo.upper())
-
-        print("\n" + "Press any key to get another quote." + "\n")
+    print("\n" + "Press any key to get another quote." + "\n")
 
     wait()
